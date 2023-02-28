@@ -15,6 +15,63 @@ const algorithm = "aes-256-cbc";
 const key = "1f2d3e4c5b6a7d8e9f0g1h2i3j4k5l6m";
 const iv = crypto.lib.WordArray.random(256 / 8).toString(crypto.enc.Hex);
 
+// set templating engine
+app.set("view engine", 'ejs');
+
+//route to decrypt message
+//route to decrypt message
+app.get("/decrypt/:encrypted", async function (request, result) {
+    const encrypted = request.params.encrypted;
+
+    try {
+        await client.connect();
+        const collection = client.db("file").collection("strings");
+        const obj = await collection.findOne({ message: encrypted });
+
+        if (obj) {
+            const iv = Buffer.from(obj.iv, 'base64');
+            const decrypted = crypto.AES.decrypt(encrypted, key, {
+                iv: iv,
+                mode: crypto.mode.CBC,
+                padding: crypto.pad.Pkcs7,
+            });
+
+            result.send(decrypted.toString(crypto.enc.Utf8));
+        } else {
+            result.send("Message not found");
+        }
+
+    } catch (error) {
+        console.error(error);
+        result.send("Error fetching data from database");
+    } finally {
+        await client.close();
+        console.log("Disconnected from the database");
+    }
+})
+
+
+//route to show all messages
+app.get("/display", async function (request, result) {
+    try {
+        await client.connect();
+        const data = await client.db("file").collection("strings")
+            .find({})
+            .sort({
+                _id: -1
+            }).toArray();
+
+        result.render("index", {
+            data: data
+        });
+
+    } catch (error) {
+        console.error(error);
+        result.send("Error fetching data from database");
+    }
+})
+
+// route to encrypt message
 app.get("/encrypt/:message", async function (request, result) {
     const message = request.params.message;
 

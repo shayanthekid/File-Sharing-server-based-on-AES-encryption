@@ -1,0 +1,13 @@
+<html>
+  <head>
+    <title>Encrypted messages</title>
+  </head>
+  <body>
+    <h1>Encrypted messages:</h1>
+    <ul>
+      <% data.forEach(function(message) { %>
+        <li><%= message.message %></li>
+      <% }); %>
+    </ul>
+  </body>
+</html>
