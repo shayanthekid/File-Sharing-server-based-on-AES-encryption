@@ -36,7 +36,7 @@ exports.getFile = async (req, res) => {
     const encrypted = req.params.encrypted.replace(/_/g, "/").replace(/-/g, "+").replace(/-/g, "%");
 
     try {
-        const file = await File.findOne({ message: encrypted });
+        const file = await File.findOne({ iv: encrypted });
 
         if (file) {
             const iv = Buffer.from(file.iv, "base64");
