@@ -20,6 +20,9 @@ mongoose.connect(
 // Set up routes
 const indexRouter = require("./routes/index");
 app.use("/", indexRouter);
+const authRouter = require('./routes/auth');
+app.use('/auth', authRouter);
+
 
 // Start the server
 const port = process.env.PORT || 3000;
