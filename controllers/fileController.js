@@ -3,6 +3,64 @@ const crypto = require("crypto-js");
 const algorithm = "aes-256-cbc";
 const key = "1f2d3e4c5b6a7d8e9f0g1h2i3j4k5l6m";
 const iv = crypto.lib.WordArray.random(256 / 8).toString(crypto.enc.Hex);
+const multer = require('multer');
+
+// Set storage engine
+const storage = multer.diskStorage({
+    destination: './uploads/',
+    filename: function (req, file, cb) {
+        cb(null, file.originalname);
+    }
+});
+
+// Initialize upload
+const upload = multer({
+    storage: storage
+}).single('file');
+
+exports.uploadFile = async (req, res) => {
+    upload(req, res, async function (err) {
+        if (err) {
+            console.error(err);
+            res.send('Error uploading file');
+        } else {
+            // Get the file details from the request
+            const { title, description  } = req.body;
+            const { filename } = req.file;
+
+            // Encrypt the filename using AES encryption
+            const cipher = crypto.AES.encrypt(filename, key, {
+                iv: iv,
+                mode: crypto.mode.CBC,
+                padding: crypto.pad.Pkcs7,
+            });
+
+            const base64data = Buffer.from(iv, 'binary').toString('base64');
+            const encryptedFilename = encodeURIComponent(cipher.toString()).replace(/\//g, '_').replace(/\+/g, '-');
+
+            try {
+                const file = new File({
+                    title: title,
+                    description: description,
+                    iv: base64data,
+                    username: "testuser",
+                    filename: encryptedFilename
+                });
+
+                await file.save();
+
+                res.send('File uploaded successfully');
+            } catch (err) {
+                console.error(err);
+                res.send('Error uploading file');
+            }
+        }
+    });
+};
+
+
+
+
 
 exports.createFile = async (req, res) => {
     const message = req.params.message;
