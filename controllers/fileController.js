@@ -4,7 +4,7 @@ const algorithm = "aes-256-cbc";
 const key = "1f2d3e4c5b6a7d8e9f0g1h2i3j4k5l6m";
 const iv = crypto.lib.WordArray.random(256 / 8).toString(crypto.enc.Hex);
 const multer = require('multer');
-
+const path = require('path');
 // Set storage engine
 const storage = multer.diskStorage({
     destination: './uploads/',
@@ -59,7 +59,60 @@ exports.uploadFile = async (req, res) => {
 };
 
 
+exports.getAllFiles = async (req, res) => {
+    try {
+        const files = await File.find({});
 
+        const decryptedFiles = files.map((file) => {
+            const decryptedFilename = crypto.AES.decrypt(decodeURIComponent(file.filename).replace(/_/g, '/').replace(/-/g, '+'), key, {
+                iv: Buffer.from(file.iv, 'base64'),
+                mode: crypto.mode.CBC,
+                padding: crypto.pad.Pkcs7
+            }).toString(crypto.enc.Utf8);
+
+            return {
+                id: file._id,
+                title: file.title,
+                filename: decryptedFilename,
+                username: file.username
+            };
+        });
+
+       
+
+        // construct the absolute path to the file
+        const filePath = path.join(__dirname, '..', 'uploads/',);
+
+
+        //res.json(decryptedFiles);
+        res.render('files', { decryptedFiles, filePath });
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Error retrieving files');
+    }
+};
+
+exports.downloadFile = async (req, res) => {
+    try {
+        const file = await File.findById(req.params.id);
+        const decryptedFilename = crypto.AES.decrypt(
+            decodeURIComponent(file.filename).replace(/_/g, '/').replace(/-/g, '+'),
+            key,
+            {
+                iv: Buffer.from(file.iv, 'base64'),
+                mode: crypto.mode.CBC,
+                padding: crypto.pad.Pkcs7
+            }
+        ).toString(crypto.enc.Utf8);
+
+        const filePath = path.join(__dirname, '..', 'uploads', decryptedFilename);
+
+        res.download(filePath, file.originalname);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to download file' });
+    }
+};
 
 
 exports.createFile = async (req, res) => {
@@ -89,6 +142,8 @@ exports.createFile = async (req, res) => {
         res.send("Error encrypting message");
     }
 };
+
+
 
 exports.getFile = async (req, res) => {
     const encrypted = req.params.encrypted.replace(/_/g, "/").replace(/-/g, "+").replace(/-/g, "%");
