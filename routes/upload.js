@@ -23,6 +23,7 @@ router.get('/getAllFiles', (req, res) => {
 
     fileController.getAllFiles(req, res);
 });
+router.post('/delete/:id', fileController.deleteFile);
 
 
 module.exports = router;

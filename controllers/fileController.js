@@ -62,6 +62,10 @@ exports.uploadFile = async (req, res) => {
 
 
 exports.getAllFiles = async (req, res) => {
+
+    let filePath;
+    let test = 1234;
+
     try {
         const files = await File.find({});
         const logs = await DownloadLog.find({});
@@ -81,15 +85,15 @@ exports.getAllFiles = async (req, res) => {
         });
         
         
+        filePath = path.join(__dirname, '..', 'uploads/');
 
        
 
         // construct the absolute path to the file
-        const filePath = path.join(__dirname, '..', 'uploads/',);
 
 
         //res.json(decryptedFiles);
-        res.render('files', { decryptedFiles, filePath, req, logs });
+        res.render('files', { decryptedFiles, filePath, req, logs, test });
     } catch (err) {
         console.error(err);
         res.status(500).send('Error retrieving files');
@@ -132,6 +136,15 @@ exports.downloadFile = async (req, res) => {
     }
 };
 
+exports.deleteFile = async (req, res) => {
+    try {
+        const file = await File.findByIdAndDelete(req.params.id);
+        res.send('File deleted successfully');
+    } catch (err) {
+        console.error(err);
+        res.status(500).send('Error deleting file');
+    }
+};
 
 exports.createFile = async (req, res) => {
     const message = req.params.message;

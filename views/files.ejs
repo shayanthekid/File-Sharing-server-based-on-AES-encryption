@@ -9,10 +9,12 @@
     <div class="container mt-5">
         <h1>My Files</h1>
 <% if (typeof locals.req.session.user !== 'undefined') { %>
-        <p>Welcome <%= req.session.user.username %>!</p>
+        <p>Welcome <%= req.session.user.username %>! 
+        </p>
 <% } else { %>
     <p>Please log in</p>
 <% } %>
+
        <div class="row mt-3">
     <% for (let i = 0; i < decryptedFiles.length; i++) { %>
         <div class="col-md-4">
@@ -22,6 +24,11 @@
                     <h5 class="card-title"><%= decryptedFiles[i].title %></h5>
                     <p class="card-text">Uploaded by <%= decryptedFiles[i].username %> on <%= decryptedFiles[i].createdAt %></p>
                     <a href="/home/download/<%= decryptedFiles[i].id %>" class="btn btn-primary">Download</a>
+                     <% if (decryptedFiles[i].username === req.session.user.username) { %>
+        <form method="POST" action="/home/delete/<%= decryptedFiles[i].id %>" style="display:inline-block;">
+            <button type="submit" class="btn btn-danger">Delete</button>
+        </form>
+    <% } %>
                     <% for (let j = 0; j < logs.length; j++) { %>
                         <% if (logs[j].fileId.toString() === decryptedFiles[i].id.toString()) { %>
                             <p class="card-text">Downloaded by <%= logs[j].username %> on <%= logs[j].downloadTime %></p>
