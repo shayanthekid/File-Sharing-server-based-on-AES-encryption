@@ -85,7 +85,7 @@ exports.getAllFiles = async (req, res) => {
 
 
         //res.json(decryptedFiles);
-        res.render('files', { decryptedFiles, filePath });
+        res.render('files', { decryptedFiles, filePath, req });
     } catch (err) {
         console.error(err);
         res.status(500).send('Error retrieving files');

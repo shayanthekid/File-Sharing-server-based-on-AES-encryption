@@ -56,9 +56,15 @@ exports.login = async (req, res) => {
             return res.status(401).send('Invalid username or password');
         }
 
-        res.send('Logged in successfully');
+        req.session.user = {
+            username: user.username,
+            email: 'example@example.com'
+        };
+
+        res.redirect('/home/getAllFiles');
+       // res.send('Logged in successfully');
     } catch (err) {
         console.error(err);
-        res.send('Error logging in');
+        res.send(err);
     }
 };
