@@ -73,3 +73,10 @@ exports.login = async (req, res) => {
         res.send(err);
     }
 };
+
+exports.logout = async (req, res) => {
+    // Destroy session data
+    req.session = null;
+    res.redirect('/auth/login');
+   
+}
