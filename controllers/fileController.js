@@ -1,4 +1,5 @@
 const File = require('../models/file');
+const DownloadLog = require('../models/log')
 const crypto = require("crypto-js");
 const algorithm = "aes-256-cbc";
 const key = "1f2d3e4c5b6a7d8e9f0g1h2i3j4k5l6m";
@@ -63,7 +64,7 @@ exports.uploadFile = async (req, res) => {
 exports.getAllFiles = async (req, res) => {
     try {
         const files = await File.find({});
-
+        const logs = await DownloadLog.find({});
         const decryptedFiles = files.map((file) => {
             const decryptedFilename = crypto.AES.decrypt(decodeURIComponent(file.filename).replace(/_/g, '/').replace(/-/g, '+'), key, {
                 iv: Buffer.from(file.iv, 'base64'),
@@ -78,6 +79,8 @@ exports.getAllFiles = async (req, res) => {
                 username: file.username
             };
         });
+        
+        
 
        
 
@@ -86,7 +89,7 @@ exports.getAllFiles = async (req, res) => {
 
 
         //res.json(decryptedFiles);
-        res.render('files', { decryptedFiles, filePath, req });
+        res.render('files', { decryptedFiles, filePath, req, logs });
     } catch (err) {
         console.error(err);
         res.status(500).send('Error retrieving files');
@@ -109,6 +112,20 @@ exports.downloadFile = async (req, res) => {
         const filePath = path.join(__dirname, '..', 'uploads', decryptedFilename);
 
         res.download(filePath, file.originalname);
+        const currentTime = new Date();
+
+        try {
+            const log = new DownloadLog({
+                fileId: req.params.id,
+                username: req.session.user.username,
+                downloadTime: currentTime
+            });
+
+            await log.save();
+        } catch (error) {
+            console.error(error);
+        }
+
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Failed to download file' });
