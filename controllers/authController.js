@@ -26,7 +26,12 @@ exports.signup = async (req, res) => {
 
         await user.save();
 
-        res.send('User created successfully');
+        req.session.user = {
+            username: user.username,
+            email: 'example@example.com'
+        };
+
+        res.redirect('/home/getAllFiles');
     } catch (err) {
         console.error(err);
         res.send('Error creating user');

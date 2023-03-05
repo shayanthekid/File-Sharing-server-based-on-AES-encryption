@@ -4,7 +4,12 @@ const fileController = require('../controllers/fileController');
 
 
 router.get('/upload', (req, res) => {
-    res.render("upload", );
+
+    if (!req.session.user) {
+        return res.redirect('/auth/login');
+    }
+
+    res.render("upload", { user: req.session.user }  );
 });
 router.get('/download/:id', fileController.downloadFile);
 

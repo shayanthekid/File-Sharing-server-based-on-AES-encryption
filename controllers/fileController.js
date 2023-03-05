@@ -27,6 +27,7 @@ exports.uploadFile = async (req, res) => {
             // Get the file details from the request
             const { title, description  } = req.body;
             const { filename } = req.file;
+            const { username } = req.session.user;
 
             // Encrypt the filename using AES encryption
             const cipher = crypto.AES.encrypt(filename, key, {
@@ -43,7 +44,7 @@ exports.uploadFile = async (req, res) => {
                     title: title,
                     description: description,
                     iv: base64data,
-                    username: "testuser",
+                    username: username,
                     filename: encryptedFilename
                 });
 
