@@ -6,6 +6,10 @@ const key = "1f2d3e4c5b6a7d8e9f0g1h2i3j4k5l6m";
 const iv = crypto.lib.WordArray.random(256 / 8).toString(crypto.enc.Hex);
 const multer = require('multer');
 const path = require('path');
+const AWS = require('../models/aws');
+const kms = new AWS.KMS({ region: 'ap-southeast-1' });
+const keyId = 'arn:aws:kms:ap-southeast-1:826894182914:key/d9341968-3e8e-409c-8120-6dde85dd882d';
+
 // Set storage engine
 const storage = multer.diskStorage({
     destination: './uploads/',
@@ -26,40 +30,45 @@ exports.uploadFile = async (req, res) => {
             res.send('Error uploading file');
         } else {
             // Get the file details from the request
-            const { title, description  } = req.body;
+            const { title, description } = req.body;
             const { filename } = req.file;
             const { username } = req.session.user;
 
-            // Encrypt the filename using AES encryption
-            const cipher = crypto.AES.encrypt(filename, key, {
-                iv: iv,
-                mode: crypto.mode.CBC,
-                padding: crypto.pad.Pkcs7,
+            // Encrypt the filename using KMS encryption
+            const encryptParams = {
+                KeyId: keyId,
+                Plaintext: Buffer.from(filename),
+            };
+
+            kms.encrypt(encryptParams, async (err, data) => {
+                if (err) {
+                    console.log('Encryption error:', err);
+                    res.send('Error uploading file');
+                } else {
+                    const encryptedFilename = data.CiphertextBlob.toString('base64');
+                    const base64data = Buffer.from(iv, 'binary').toString('base64');
+
+                    try {
+                        const file = new File({
+                            title: title,
+                            description: description,
+                            iv: base64data,
+                            username: username,
+                            filename: encryptedFilename
+                        });
+
+                        await file.save();
+
+                        res.send('File uploaded successfully');
+                    } catch (err) {
+                        console.error(err);
+                        res.send('Error uploading file');
+                    }
+                }
             });
-
-            const base64data = Buffer.from(iv, 'binary').toString('base64');
-            const encryptedFilename = encodeURIComponent(cipher.toString()).replace(/\//g, '_').replace(/\+/g, '-');
-
-            try {
-                const file = new File({
-                    title: title,
-                    description: description,
-                    iv: base64data,
-                    username: username,
-                    filename: encryptedFilename
-                });
-
-                await file.save();
-
-                res.send('File uploaded successfully');
-            } catch (err) {
-                console.error(err);
-                res.send('Error uploading file');
-            }
         }
     });
 };
-
 
 exports.getAllFiles = async (req, res) => {
 
@@ -69,20 +78,23 @@ exports.getAllFiles = async (req, res) => {
     try {
         const files = await File.find({});
         const logs = await DownloadLog.find({});
-        const decryptedFiles = files.map((file) => {
-            const decryptedFilename = crypto.AES.decrypt(decodeURIComponent(file.filename).replace(/_/g, '/').replace(/-/g, '+'), key, {
-                iv: Buffer.from(file.iv, 'base64'),
-                mode: crypto.mode.CBC,
-                padding: crypto.pad.Pkcs7
-            }).toString(crypto.enc.Utf8);
+        const decryptedFiles = await Promise.all(
+            files.map(async (file) => {
+                const decryptedFilename = await kms.decrypt({
+                    CiphertextBlob: Buffer.from(file.filename, 'base64'),
+                    EncryptionContext: {
+                        // Add any encryption context you have used when encrypting the file name
+                    }
+                }).promise().then(data => data.Plaintext.toString());
 
-            return {
-                id: file._id,
-                title: file.title,
-                filename: decryptedFilename,
-                username: file.username
-            };
-        });
+                return {
+                    id: file._id,
+                    title: file.title,
+                    filename: decryptedFilename,
+                    username: file.username
+                };
+            })
+        );
         
         
         filePath = path.join(__dirname, '..', 'uploads/');
@@ -103,15 +115,13 @@ exports.getAllFiles = async (req, res) => {
 exports.downloadFile = async (req, res) => {
     try {
         const file = await File.findById(req.params.id);
-        const decryptedFilename = crypto.AES.decrypt(
-            decodeURIComponent(file.filename).replace(/_/g, '/').replace(/-/g, '+'),
-            key,
-            {
-                iv: Buffer.from(file.iv, 'base64'),
-                mode: crypto.mode.CBC,
-                padding: crypto.pad.Pkcs7
+        // Decrypt the filename using AWS KMS
+        const decryptedFilename = await kms.decrypt({
+            CiphertextBlob: Buffer.from(file.filename, 'base64'),
+            EncryptionContext: {
+                // Add any encryption context you have used when encrypting the file name
             }
-        ).toString(crypto.enc.Utf8);
+        }).promise().then(data => data.Plaintext.toString());
 
         const filePath = path.join(__dirname, '..', 'uploads', decryptedFilename);
 
